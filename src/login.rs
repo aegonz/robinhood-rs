@@ -378,6 +378,18 @@ impl Robinhood {
         self.refresh_token = refresh_token;
     }
 
+    pub fn get_device_token(&self) -> Uuid {
+        self.device_token
+    }
+
+    pub fn get_refresh_token(&self) -> String {
+        self.refresh_token.clone()
+    }
+
+    pub fn get_token(&self) -> String {
+        self.token.clone()
+    }
+
     /// Default is `true`
     ///
     /// The lib will try to refresh the token if any of the calls return a 401

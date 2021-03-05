@@ -29,12 +29,6 @@ pub struct Robinhood {
     retries: usize,
 }
 
-impl Robinhood {
-    pub fn get_device_token(&self) -> Uuid {
-        self.device_token
-    }
-}
-
 #[cfg(test)]
 mod tests {
     #[test]
