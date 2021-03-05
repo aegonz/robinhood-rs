@@ -159,10 +159,15 @@ impl MfaLogin {
         match payload.as_object_mut() {
             Some(map) => {
                 map.insert("mfa_code".to_owned(), Value::String(mfa_code));
+                payload = serde_json::json!(map);
             }
             None => {
                 bail!("Failed to add mfa_code to the payload. This should have never happened")
             }
+        }
+        // Make sure mfa_code is in the request body
+        if let None = payload.get("mfa_code") {
+            bail!("Failed to insert 'mfa_code' to the request body");
         }
         // Send request to Robinhood
         let login_response: LoginSuccess = match set_req_headers(
