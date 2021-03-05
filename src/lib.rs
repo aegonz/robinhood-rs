@@ -1,6 +1,5 @@
 pub use anyhow::{Error, Result};
 
-use serde_json::Value;
 use uuid::Uuid;
 
 // Base URL
