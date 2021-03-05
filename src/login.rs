@@ -351,7 +351,7 @@ impl Robinhood {
         self.token = token;
     }
 
-    pub fn set_refreshtoken(&mut self, refresh_token: String) {
+    pub fn set_refresh_token(&mut self, refresh_token: String) {
         self.refresh_token = refresh_token;
     }
 
