@@ -33,43 +33,48 @@ impl Robinhood {
                 if let Some(payload) = request.payload {
                     req = req.json(payload)
                 }
-                loop {
-                    let req = match req.try_clone() {
-                        Some(rq) => rq,
-                        None => {
-                            bail!("Failed to clone request. Might be a stream")
-                        }
-                    };
-                    match req.send().await {
-                        Ok(res) => return Ok(res),
-                        Err(e) => {
-                            if let Some(status_code) = e.status() {
-                                // If status code is a 401 try to refresh the token
-                                if status_code.as_u16() == 401 && self.auto_refresh {
-                                    if let Err(e) = self.refresh_token().await {
-                                        bail!(e);
-                                    }
-                                // If Robinhood is unreachable retry the request
-                                } else if status_code.is_server_error() && self.auto_retry {
-                                    println!("Server error {} with status code {}", e, status_code);
-                                    thread::sleep(Duration::from_millis(500));
-                                    continue;
-                                }
-                                bail!(e);
-                            }
-
-                            if (e.is_connect() || e.is_timeout()) && self.auto_retry {
-                                println!("Connection error {}", e);
-                                thread::sleep(Duration::from_millis(500));
-                                continue;
-                            }
-                            bail!(e);
-                        }
-                    }
-                }
+                self.send_req(req).await
             }
             ReqKind::Get => {
-                todo!()
+                let req = set_req_headers(self, reqwest::Client::new().get(request.url));
+                self.send_req(req).await
+            }
+        }
+    }
+
+    async fn send_req(&mut self, req: RequestBuilder) -> Result<Response> {
+        loop {
+            let req = match req.try_clone() {
+                Some(rq) => rq,
+                None => {
+                    bail!("Failed to clone request. Might be a stream")
+                }
+            };
+            match req.send().await {
+                Ok(res) => return Ok(res),
+                Err(e) => {
+                    if let Some(status_code) = e.status() {
+                        // If status code is a 401 try to refresh the token
+                        if status_code.as_u16() == 401 && self.auto_refresh {
+                            if let Err(e) = self.refresh_token().await {
+                                bail!(e);
+                            }
+                        // If Robinhood is unreachable retry the request
+                        } else if status_code.is_server_error() && self.auto_retry {
+                            println!("Server error {} with status code {}", e, status_code);
+                            thread::sleep(Duration::from_millis(500));
+                            continue;
+                        }
+                        bail!(e);
+                    }
+
+                    if (e.is_connect() || e.is_timeout()) && self.auto_retry {
+                        println!("Connection error {}", e);
+                        thread::sleep(Duration::from_millis(500));
+                        continue;
+                    }
+                    bail!(e);
+                }
             }
         }
     }
