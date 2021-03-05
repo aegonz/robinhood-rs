@@ -355,6 +355,26 @@ impl Robinhood {
         self.refresh_token = refresh_token;
     }
 
+    /// Default is `true`
+    ///
+    /// The lib will try to refresh the token if any of the calls return a 401
+    ///
+    /// This setting enables the auto refresh of a token if a call returns a 401
+    pub fn set_auto_refresh(&mut self, auto_refresh: bool) {
+        self.auto_refresh = auto_refresh;
+    }
+
+    /// Default retries is 200
+    ///
+    /// The lib will try to refresh the token if any of the calls return a 401
+    ///
+    /// If the auto refresh failed with a connection error it will retry.
+    ///
+    /// Other types of connection error should be handled application specific instead
+    pub fn set_retries(&mut self, retries: usize) {
+        self.retries = retries;
+    }
+
     // Necessary after every 24h since access_token has an expiration of 24h
     pub async fn refresh_token(&mut self) -> Result<(Token, RefreshToken)> {
         let new_token_payload = refresh_token(

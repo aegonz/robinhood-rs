@@ -78,24 +78,4 @@ impl Robinhood {
             }
         }
     }
-
-    /// Default is `true`
-    ///
-    /// The lib will try to refresh the token if any of the calls return a 401
-    ///
-    /// This setting enables the auto refresh of a token if a call returns a 401
-    pub fn set_auto_refresh(&mut self, retries: usize) {
-        self.retries = retries;
-    }
-
-    /// Default retries is 200
-    ///
-    /// The lib will try to refresh the token if any of the calls return a 401
-    ///
-    /// If the auto refresh failed with a connection error it will retry.
-    ///
-    /// Other types of connection error should be handled application specific instead
-    pub fn set_retries(&mut self, retries: usize) {
-        self.retries = retries;
-    }
 }
