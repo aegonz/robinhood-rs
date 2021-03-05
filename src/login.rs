@@ -297,6 +297,29 @@ impl Robinhood {
         Ok(MfaLogin::new(username, password).await?)
     }
 
+    /// If you already have a token and a refresh_token then use this to instantiate
+    /// the session
+    pub async fn token_login(
+        token: String,
+        refresh_token: String,
+        device_token: Uuid,
+        username: Option<String>,
+        password: Option<String>,
+    ) -> Robinhood {
+        Robinhood {
+            device_token,
+            password,
+            username,
+            user_agent: USER_AGENT.to_owned(),
+            token,
+            refresh_token,
+            token_expires_in: EXPIRES_IN,
+            retries: 200,
+            auto_refresh: true,
+            auto_retry: true,
+        }
+    }
+
     /// The default agent is
     /// `"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.182 Safari/537.36 Edg/88.0.705.81"`
     ///

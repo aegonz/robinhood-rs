@@ -17,8 +17,8 @@ mod queries;
 mod req;
 
 pub struct Robinhood {
-    username: String,
-    password: String,
+    username: Option<String>,
+    password: Option<String>,
     token_expires_in: u32,
     token: String,
     refresh_token: String,
