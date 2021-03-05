@@ -186,8 +186,8 @@ impl MfaLogin {
         // Build a Robinhood session
         Ok(Robinhood {
             device_token: self.device_token,
-            password: self.password,
-            username: self.username,
+            password: Some(self.password),
+            username: Some(self.username),
             user_agent: self.user_agent,
             token: login_response.access_token,
             refresh_token: login_response.refresh_token,
@@ -332,8 +332,8 @@ impl Robinhood {
 
     /// Change username and password
     pub fn set_credentials(&mut self, username: String, password: String) {
-        self.username = username;
-        self.password = password;
+        self.username = Some(username);
+        self.password = Some(password);
     }
 
     /// Change device token
