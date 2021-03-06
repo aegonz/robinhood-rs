@@ -133,7 +133,7 @@ impl MfaLogin {
     pub async fn request_mfa_code(&self) -> Result<(), RobinhoodErr> {
         let payload = self.build_login_payload();
 
-        if let Err(e) = set_req_headers(
+        match set_req_headers(
             self,
             reqwest::Client::new().post(&format!("{}{}", ROBINHOOD_API_URL, LOG_IN_PATH)),
         )
@@ -141,8 +141,24 @@ impl MfaLogin {
         .send()
         .await
         {
-            return Err(RobinhoodErr::RequestError(e));
-        };
+            Ok(res) => {
+                match res.json::<Value>().await {
+                    Ok(body) => {
+                        if let Some(detail_msg) = body["detail"].as_str() {
+                            if detail_msg.contains("Unable to log in with provided credentials") {
+                                return Err(RobinhoodErr::InvalidCredentials);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        return Err(RobinhoodErr::RequestError(e));
+                    }
+                };
+            }
+            Err(e) => {
+                return Err(RobinhoodErr::RequestError(e));
+            }
+        }
         Ok(())
     }
 

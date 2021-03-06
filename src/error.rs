@@ -19,4 +19,27 @@ pub enum RobinhoodErr {
     ParseIntError(#[from] ParseIntError),
     #[error("{0}")]
     Internal(String),
+    /// Invalid log in credentials
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use robinhood::RobinhoodErr;
+    ///
+    /// ...
+    /// 
+    /// let mut robinhood_client = robinhood::mfa_login(username, password).await {
+    ///     Ok(client) => client,
+    ///     Err(e) => {
+    ///         match e {
+    ///            RobinhoodErr::InvalidCredentials => {
+    ///                 panic!("oops wrong username/password")
+    ///            },
+    ///            _ => {panic!(e)}
+    ///         }
+    ///     }
+    /// };
+    /// ```
+    #[error("Invalid username/password")]
+    InvalidCredentials,
 }
