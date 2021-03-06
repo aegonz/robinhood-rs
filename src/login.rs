@@ -277,13 +277,15 @@ impl Robinhood {
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     let mfa_client = Robinhood::mfa_login("my_username".to_owned(), "password".to_owned());
-    ///     mfa_client.request_mfa_code().await.unwrap();
+    ///     let username = "my_username".to_owned();
+    ///     let password = "password".to_owned()
+    ///     let mfa_client = Robinhood::mfa_login(username, password).await?;
     ///     // By this point you should have received an SMS/E-mail containing a login code
     ///     // Add your own logic to wait for the code and insert it in the next function
     ///     // You could have a loop trying to retrieve it from a database or if this is run as a script from std::input
     ///     let mfa_code = ...
-    ///     let robinhood = mfa_client.log_in(mfa_code).await.unwrap();
+    ///     // Needs to be `mut` will revise this in the future
+    ///     let mut robinhood = mfa_client.log_in(mfa_code).await?;
     ///
     ///     // Get the price of SPY in an interval
     ///     use std::time::Duration;
@@ -292,7 +294,7 @@ impl Robinhood {
     ///     loop {
     ///         // Use some timer to not spam Robinhood with request.. you might get banned
     ///         thread::sleep(Duration::from_millis(500));
-    ///         let price: usize = robinhood.get_price("SPY").await.unwrap().last_trade_price;
+    ///         let price: usize = robinhood.get_price("SPY").await?;
     ///         println!("{}", price);
     ///     }
     ///

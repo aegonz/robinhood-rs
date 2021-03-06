@@ -1,5 +1,6 @@
 pub use anyhow::{Error, Result};
 
+use login::MfaLogin;
 use uuid::Uuid;
 
 // Base URL
@@ -16,6 +17,38 @@ mod login;
 mod queries;
 mod req;
 
+/// A library wrapping Robinhood unofficial API
+///
+/// # Example
+///
+/// ```
+/// use robinhood::Robinhood;
+///
+/// #[tokio::main]
+/// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+///     let username = "my_username".to_owned();
+///     let password = "password".to_owned()
+///     let mfa_client = Robinhood::mfa_login(username, password).await?;
+///     // By this point you should have received an SMS/E-mail containing a login code
+///     // Add your own logic to wait for the code and insert it in the next function
+///     // You could have a loop trying to retrieve it from a database or if this is run as a script from std::input
+///     let mfa_code = ...
+///     // Needs to be `mut` will revise this in the future
+///     let mut robinhood = mfa_client.log_in(mfa_code).await?;
+///
+///     // Get the price of SPY in an interval
+///     use std::time::Duration;
+///     use std::thread;
+///
+///     loop {
+///         // Use some timer to not spam Robinhood with request.. you might get banned
+///         thread::sleep(Duration::from_millis(500));
+///         let price: usize = robinhood.get_price("SPY").await?;
+///         println!("{}", price);
+///     }
+///
+/// }
+/// ```
 pub struct Robinhood {
     username: Option<String>,
     password: Option<String>,
@@ -27,6 +60,20 @@ pub struct Robinhood {
     auto_refresh: bool,
     auto_retry: bool,
     retries: usize,
+}
+
+pub async fn mfa_login(username: String, password: String) -> Result<MfaLogin> {
+    Robinhood::mfa_login(username, password).await
+}
+
+pub async fn token_login(
+    token: String,
+    refresh_token: String,
+    device_token: Uuid,
+    username: Option<String>,
+    password: Option<String>,
+) -> Robinhood {
+    Robinhood::token_login(token, refresh_token, device_token, username, password).await
 }
 
 #[cfg(test)]
