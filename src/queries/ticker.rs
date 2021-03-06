@@ -7,7 +7,7 @@ use crate::{Robinhood, QUOTES_PATH, ROBINHOOD_API_URL};
 
 impl Robinhood {
     pub async fn get_quote(&mut self, symbol: String) -> Result<QuotesResponse> {
-        let url = &format!("{}{}{}", ROBINHOOD_API_URL, QUOTES_PATH, symbol);
+        let url = &format!("{}{}{}/", ROBINHOOD_API_URL, QUOTES_PATH, symbol);
         let response = self
             .req(RobinhoodReq {
                 kind: ReqKind::Get,
