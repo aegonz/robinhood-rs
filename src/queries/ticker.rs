@@ -15,7 +15,7 @@ impl Robinhood {
                 url,
             })
             .await?;
-
+        println!("{:?}", response);
         match response.json::<QuotesResponse>().await {
             Ok(res) => return Ok(res),
             Err(e) => {
