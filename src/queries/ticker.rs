@@ -1,5 +1,4 @@
-use crate::Result;
-use anyhow::bail;
+use crate::error::RobinhoodErr;
 use serde::{Deserialize, Serialize};
 
 use crate::req::{ReqKind, RobinhoodReq};
@@ -7,7 +6,7 @@ use crate::{Robinhood, QUOTES_PATH, ROBINHOOD_API_URL};
 
 impl Robinhood {
     /// Calls api.robinhood.com/quotes/(symbol)/ and returns the body as `QuotesResponse`
-    pub async fn get_quote(&mut self, symbol: String) -> Result<QuotesResponse> {
+    pub async fn get_quote(&mut self, symbol: String) -> Result<QuotesResponse, RobinhoodErr> {
         let url = &format!("{}{}{}/", ROBINHOOD_API_URL, QUOTES_PATH, symbol);
         let response = self
             .req(RobinhoodReq {
@@ -18,21 +17,17 @@ impl Robinhood {
             .await?;
         match response.json::<QuotesResponse>().await {
             Ok(res) => return Ok(res),
-            Err(e) => {
-                bail!(e)
-            }
+            Err(e) => return Err(RobinhoodErr::RequestError(e)),
         };
     }
 
     /// Calls api.robinhood.com/quotes/(symbol)/ to retrieve a `QuotesResponse`
     /// and extracts the `last_trade_price` from the body
-    pub async fn get_price(&mut self, symbol: String) -> Result<usize> {
+    pub async fn get_price(&mut self, symbol: String) -> Result<usize, RobinhoodErr> {
         let quote = self.get_quote(symbol).await?;
         match quote.last_trade_price.parse::<usize>() {
             Ok(v) => Ok(v),
-            Err(e) => {
-                bail!(e)
-            }
+            Err(e) => return Err(RobinhoodErr::ParseIntError(e)),
         }
     }
 }

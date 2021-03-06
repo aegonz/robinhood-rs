@@ -32,7 +32,8 @@
 //!
 //! }
 //! ```
-pub use anyhow::{Error, Result};
+use error::RobinhoodErr;
+pub use reqwest::Error as ReqwestError;
 
 use login::MfaLogin;
 use uuid::Uuid;
@@ -47,6 +48,7 @@ const CLIENT_ID: &str = "c82SH0WZOsabOXGP2sxqcj34FxkvfnWRZBKlBjFS";
 const EXPIRES_IN: u32 = 86400;
 const USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.182 Safari/537.36 Edg/88.0.705.81";
 
+pub mod error;
 mod login;
 mod queries;
 mod req;
@@ -61,7 +63,6 @@ pub struct Robinhood {
     device_token: Uuid,
     user_agent: String,
     auto_refresh: bool,
-    auto_retry: bool,
     retries: usize,
 }
 /// Initializes an MFA login session
@@ -96,7 +97,7 @@ pub struct Robinhood {
 ///
 /// }
 /// ```
-pub async fn mfa_login(username: String, password: String) -> Result<MfaLogin> {
+pub async fn mfa_login(username: String, password: String) -> Result<MfaLogin, RobinhoodErr> {
     Robinhood::mfa_login(username, password).await
 }
 
