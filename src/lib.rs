@@ -22,28 +22,28 @@ mod req;
 /// # Example
 ///
 /// ```
-/// use robinhood::Robinhood;
+/// use robinhood;
 ///
 /// #[tokio::main]
 /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ///     let username = "my_username".to_owned();
 ///     let password = "password".to_owned()
-///     let mfa_client = Robinhood::mfa_login(username, password).await?;
+///     let mfa_client = robinhood::mfa_login(username, password).await?;
 ///     // By this point you should have received an SMS/E-mail containing a login code
 ///     // Add your own logic to wait for the code and insert it in the next function
 ///     // You could have a loop trying to retrieve it from a database or if this is run as a script from std::input
 ///     let mfa_code = ...
 ///     // Needs to be `mut` will revise this in the future
-///     let mut robinhood = mfa_client.log_in(mfa_code).await?;
+///     let mut robinhood_client = mfa_client.log_in(mfa_code).await?;
 ///
 ///     // Get the price of SPY in an interval
 ///     use std::time::Duration;
 ///     use std::thread;
 ///
 ///     loop {
-///         // Use some timer to not spam Robinhood with request.. you might get banned
+///         // Use some timer to not spam Robinhood with requests.. you might get banned
 ///         thread::sleep(Duration::from_millis(500));
-///         let price: usize = robinhood.get_price("SPY").await?;
+///         let price: usize = robinhood_client.get_price("SPY").await?;
 ///         println!("{}", price);
 ///     }
 ///
@@ -66,14 +66,8 @@ pub async fn mfa_login(username: String, password: String) -> Result<MfaLogin> {
     Robinhood::mfa_login(username, password).await
 }
 
-pub async fn token_login(
-    token: String,
-    refresh_token: String,
-    device_token: Uuid,
-    username: Option<String>,
-    password: Option<String>,
-) -> Robinhood {
-    Robinhood::token_login(token, refresh_token, device_token, username, password).await
+pub async fn token_login(token: String, refresh_token: String, device_token: Uuid) -> Robinhood {
+    Robinhood::token_login(token, refresh_token, device_token).await
 }
 
 #[cfg(test)]

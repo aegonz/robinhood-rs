@@ -273,28 +273,28 @@ impl Robinhood {
     /// # Example
     ///
     /// ```
-    /// use robinhood::Robinhood;
+    /// use robinhood;
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ///     let username = "my_username".to_owned();
     ///     let password = "password".to_owned()
-    ///     let mfa_client = Robinhood::mfa_login(username, password).await?;
+    ///     let mfa_client = robinhood::mfa_login(username, password).await?;
     ///     // By this point you should have received an SMS/E-mail containing a login code
     ///     // Add your own logic to wait for the code and insert it in the next function
     ///     // You could have a loop trying to retrieve it from a database or if this is run as a script from std::input
     ///     let mfa_code = ...
     ///     // Needs to be `mut` will revise this in the future
-    ///     let mut robinhood = mfa_client.log_in(mfa_code).await?;
+    ///     let mut robinhood_client = mfa_client.log_in(mfa_code).await?;
     ///
     ///     // Get the price of SPY in an interval
     ///     use std::time::Duration;
     ///     use std::thread;
     ///
     ///     loop {
-    ///         // Use some timer to not spam Robinhood with request.. you might get banned
+    ///         // Use some timer to not spam Robinhood with requests.. you might get banned
     ///         thread::sleep(Duration::from_millis(500));
-    ///         let price: usize = robinhood.get_price("SPY").await?;
+    ///         let price: usize = robinhood_client.get_price("SPY").await?;
     ///         println!("{}", price);
     ///     }
     ///
@@ -308,17 +308,46 @@ impl Robinhood {
 
     /// If you already have a token and a refresh_token then use this to instantiate
     /// the session
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use robinhood;
+    /// use uuid;
+    ///
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     // If you are choosing this method then you probably logged in before using the mfa approach
+    ///     let token = "abc123".to_owned();
+    ///     let refresh_token = "123abz".to_owned()
+    ///     let device_token = uuid::Uuid::new_v4()
+    ///     let mfa_client = robinhood::token_login(token, refresh_token, device_token).await?;
+    ///     // Any calls than requires authentication will fail if the token is expired.
+    ///     // If you have a valid refresh token
+    ///     // and `Robinhood.auto_refresh` is set to true then it will create a new one.
+    ///
+    ///     // Get the price of SPY in an interval
+    ///     use std::time::Duration;
+    ///     use std::thread;
+    ///
+    ///     loop {
+    ///         // Use some timer to not spam Robinhood with requests.. you might get banned
+    ///         thread::sleep(Duration::from_millis(500));
+    ///         let price: usize = robinhood_client.get_price("SPY").await?;
+    ///         println!("{}", price);
+    ///     }
+    ///
+    /// }
+    /// ```
     pub async fn token_login(
         token: String,
         refresh_token: String,
         device_token: Uuid,
-        username: Option<String>,
-        password: Option<String>,
     ) -> Robinhood {
         Robinhood {
             device_token,
-            password,
-            username,
+            password: None,
+            username: None,
             user_agent: USER_AGENT.to_owned(),
             token,
             refresh_token,
