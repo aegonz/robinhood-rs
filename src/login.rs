@@ -289,8 +289,10 @@ impl AgentToken for MfaLogin {
     }
 }
 
-type Token = String;
-type RefreshToken = String;
+pub struct NewToken {
+    pub token: String,
+    pub refresh_token: String,
+}
 
 impl Robinhood {
     /// Initializes an MFA login session
@@ -461,7 +463,7 @@ impl Robinhood {
     }
 
     // Necessary after every 24h since access_token has an expiration of 24h
-    pub async fn refresh_token(&mut self) -> Result<(Token, RefreshToken), RefreshTokenErr> {
+    pub async fn refresh_token(&mut self) -> Result<NewToken, RefreshTokenErr> {
         let req_token_payload = RefreshTokenPayload {
             client_id: CLIENT_ID.to_owned(),
             device_token: self.device_token,
@@ -504,7 +506,10 @@ impl Robinhood {
         self.refresh_token = login_response.refresh_token;
         self.token = login_response.access_token;
         self.token_expires_in = login_response.expires_in;
-        Ok((self.token.clone(), self.refresh_token.clone()))
+        Ok(NewToken {
+            token: self.token.clone(),
+            refresh_token: self.refresh_token.clone(),
+        })
     }
 }
 
