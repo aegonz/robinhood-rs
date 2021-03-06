@@ -463,7 +463,17 @@ impl Robinhood {
     }
 
     // Necessary after every 24h since access_token has an expiration of 24h
-    pub async fn refresh_token(&mut self) -> Result<NewToken, RefreshTokenErr> {
+    pub async fn refresh_token(
+        &mut self,
+        old_refresh_token: Option<String>,
+    ) -> Result<Option<NewToken>, RefreshTokenErr> {
+        // Make sure there is no data race when updating the token
+        if let Some(old_token) = old_refresh_token {
+            if self.refresh_token != old_token {
+                return Ok(None);
+            };
+        }
+
         let req_token_payload = RefreshTokenPayload {
             client_id: CLIENT_ID.to_owned(),
             device_token: self.device_token,
@@ -506,10 +516,10 @@ impl Robinhood {
         self.refresh_token = login_response.refresh_token;
         self.token = login_response.access_token;
         self.token_expires_in = login_response.expires_in;
-        Ok(NewToken {
+        Ok(Some(NewToken {
             token: self.token.clone(),
             refresh_token: self.refresh_token.clone(),
-        })
+        }))
     }
 }
 
