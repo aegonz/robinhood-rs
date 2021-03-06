@@ -299,7 +299,9 @@ impl Robinhood {
     /// }
     /// ```
     pub async fn mfa_login(username: String, password: String) -> Result<MfaLogin> {
-        Ok(MfaLogin::new(username, password).await?)
+        let mfa_client = MfaLogin::new(username, password).await?;
+        mfa_client.request_mfa_code().await?;
+        Ok(mfa_client)
     }
 
     /// If you already have a token and a refresh_token then use this to instantiate
