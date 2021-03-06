@@ -1,3 +1,37 @@
+//! # Robinhood
+//!
+//! A library wrapping Robinhood unofficial API
+//!
+//! # Example
+//!
+//! ```
+//! use robinhood;
+//!
+//! #[tokio::main]
+//! async fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let username = "my_username".to_owned();
+//!     let password = "password".to_owned()
+//!     let mfa_client = robinhood::mfa_login(username, password).await?;
+//!     // By this point you should have received an SMS/E-mail containing a login code
+//!     // Add your own logic to wait for the code and insert it in the next function
+//!     // You could have a loop trying to retrieve it from a database or if this is run as a script from std::input
+//!     let mfa_code = ...
+//!     // Needs to be `mut` will revise this in the future
+//!     let mut robinhood_client = mfa_client.log_in(mfa_code).await?;
+//!
+//!     // Get the price of SPY in an interval
+//!     use std::time::Duration;
+//!     use std::thread;
+//!
+//!     loop {
+//!         // Use some timer to not spam Robinhood with requests.. you might get banned
+//!         thread::sleep(Duration::from_millis(500));
+//!         let price: usize = robinhood_client.get_price("SPY").await?;
+//!         println!("{}", price);
+//!     }
+//!
+//! }
+//! ```
 pub use anyhow::{Error, Result};
 
 use login::MfaLogin;
@@ -16,39 +50,6 @@ const USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/
 mod login;
 mod queries;
 mod req;
-
-/// A library wrapping Robinhood unofficial API
-///
-/// # Example
-///
-/// ```
-/// use robinhood;
-///
-/// #[tokio::main]
-/// async fn main() -> Result<(), Box<dyn std::error::Error>> {
-///     let username = "my_username".to_owned();
-///     let password = "password".to_owned()
-///     let mfa_client = robinhood::mfa_login(username, password).await?;
-///     // By this point you should have received an SMS/E-mail containing a login code
-///     // Add your own logic to wait for the code and insert it in the next function
-///     // You could have a loop trying to retrieve it from a database or if this is run as a script from std::input
-///     let mfa_code = ...
-///     // Needs to be `mut` will revise this in the future
-///     let mut robinhood_client = mfa_client.log_in(mfa_code).await?;
-///
-///     // Get the price of SPY in an interval
-///     use std::time::Duration;
-///     use std::thread;
-///
-///     loop {
-///         // Use some timer to not spam Robinhood with requests.. you might get banned
-///         thread::sleep(Duration::from_millis(500));
-///         let price: usize = robinhood_client.get_price("SPY").await?;
-///         println!("{}", price);
-///     }
-///
-/// }
-/// ```
 
 /// A Robinhood client instance
 pub struct Robinhood {
