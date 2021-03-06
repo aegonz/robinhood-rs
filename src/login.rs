@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::{ParseError, Uuid};
 
-use crate::{req::set_req_headers, LoginErr, RobinhoodErr};
+use crate::{error::RefreshTokenErr, req::set_req_headers, LoginErr, RobinhoodErr};
 use crate::{Robinhood, CLIENT_ID, EXPIRES_IN, LOG_IN_PATH, ROBINHOOD_API_URL, USER_AGENT};
 pub trait AgentToken {
     fn get_user_agent(&self) -> &str;
@@ -461,7 +461,7 @@ impl Robinhood {
     }
 
     // Necessary after every 24h since access_token has an expiration of 24h
-    pub async fn refresh_token(&mut self) -> Result<(Token, RefreshToken), RobinhoodErr> {
+    pub async fn refresh_token(&mut self) -> Result<(Token, RefreshToken), RefreshTokenErr> {
         let req_token_payload = RefreshTokenPayload {
             client_id: CLIENT_ID.to_owned(),
             device_token: self.device_token,
@@ -480,7 +480,9 @@ impl Robinhood {
                 Ok(body) => {
                     if let Some(err_msg) = body["error"].as_str() {
                         if err_msg == "invalid_grant" {
-                            return Err(RobinhoodErr::BadRefreshToken(self.refresh_token.clone()));
+                            return Err(RefreshTokenErr::BadRefreshToken(
+                                self.refresh_token.clone(),
+                            ));
                         }
                     }
 
@@ -491,13 +493,13 @@ impl Robinhood {
                                 "Failed to serialize successful login response body: ({})",
                                 e
                             );
-                            return Err(RobinhoodErr::BadResponseBody(msg));
+                            return Err(RefreshTokenErr::BadResponseBody(msg));
                         }
                     }
                 }
-                Err(e) => return Err(RobinhoodErr::RequestError(e)),
+                Err(e) => return Err(RefreshTokenErr::RequestError(e)),
             },
-            Err(e) => return Err(RobinhoodErr::RequestError(e)),
+            Err(e) => return Err(RefreshTokenErr::RequestError(e)),
         };
         self.refresh_token = login_response.refresh_token;
         self.token = login_response.access_token;

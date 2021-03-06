@@ -92,3 +92,13 @@ pub enum LoginErr {
     #[error("{0}")]
     BadResponseBody(String),
 }
+
+#[derive(Error, Debug)]
+pub enum RefreshTokenErr {
+    #[error("The refresh token '{0}' is no longer valid")]
+    BadRefreshToken(String),
+    #[error("{0}")]
+    RequestError(#[from] ReqwestError),
+    #[error("{0}")]
+    BadResponseBody(String),
+}
