@@ -65,6 +65,9 @@ impl Robinhood {
                             thread::sleep(Duration::from_millis(500));
                             continue;
                         }
+                        if status_code == 404 {
+                            println!("{:?} NOT FOUND", e.url())
+                        }
                         bail!(e);
                     }
 
