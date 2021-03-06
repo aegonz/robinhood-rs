@@ -6,7 +6,7 @@ use crate::{Robinhood, QUOTES_PATH, ROBINHOOD_API_URL};
 
 impl Robinhood {
     /// Calls api.robinhood.com/quotes/(symbol)/ and returns the body as `QuotesResponse`
-    pub async fn get_quote(&mut self, symbol: &str) -> Result<QuotesResponse, RobinhoodErr> {
+    pub async fn get_quote(&self, symbol: &str) -> Result<QuotesResponse, RobinhoodErr> {
         let url = &format!("{}{}{}/", ROBINHOOD_API_URL, QUOTES_PATH, symbol);
         let response = self
             .req(RobinhoodReq {
@@ -23,7 +23,7 @@ impl Robinhood {
 
     /// Calls api.robinhood.com/quotes/(symbol)/ to retrieve a `QuotesResponse`
     /// and extracts the `last_trade_price` from the body
-    pub async fn get_price(&mut self, symbol: &str) -> Result<f64, RobinhoodErr> {
+    pub async fn get_price(&self, symbol: &str) -> Result<f64, RobinhoodErr> {
         let quote = self.get_quote(symbol).await?;
         match quote.last_trade_price.parse::<f64>() {
             Ok(v) => Ok(v),
