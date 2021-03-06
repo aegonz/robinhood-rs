@@ -33,8 +33,6 @@ pub enum RobinhoodErr {
     /// ```
     #[error("{0}")]
     ParseFloatError(#[from] ParseFloatError),
-    #[error("{0}")]
-    Internal(String),
     /// Invalid log in credentials
     ///
     /// # Example
@@ -55,6 +53,10 @@ pub enum RobinhoodErr {
     /// ```
     #[error("Invalid username/password")]
     InvalidCredentials,
+    #[error("{0}")]
+    BadResponseBody(String),
+    #[error("The refresh token '{0}' is no longer valid")]
+    BadRefreshToken(String),
 }
 
 #[derive(Error, Debug)]
@@ -87,6 +89,6 @@ pub enum LoginErr {
     /// ```
     #[error("Invalid username/password")]
     InvalidCredentials,
-    #[error("Failed to serialize successful login response body: ({0})")]
+    #[error("{0}")]
     BadResponseBody(String),
 }

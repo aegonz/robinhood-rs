@@ -199,7 +199,11 @@ impl MfaLogin {
                     match serde_json::from_value(body) {
                         Ok(success) => success,
                         Err(e) => {
-                            return Err(LoginErr::BadResponseBody(e.to_string()));
+                            let msg = format!(
+                                "Failed to serialize successful login response body: ({})",
+                                e
+                            );
+                            return Err(LoginErr::BadResponseBody(msg));
                         }
                     }
                 }
@@ -415,15 +419,14 @@ impl Robinhood {
     ///
     /// You should only have the need to use this if you logged in with a different device ID
     /// and want to use the same session tied to that device
-    pub fn change_device_token_str(&mut self, device_token: String) -> Result<(), RobinhoodErr> {
+    pub fn change_device_token_str(&mut self, device_token: String) -> Result<(), ParseError> {
         match Uuid::from_str(&device_token) {
             Ok(new_device_token) => {
                 self.device_token = new_device_token;
                 Ok(())
             }
-            Err(_) => {
-                let msg = format!("New device token is not a valid UUID");
-                return Err(RobinhoodErr::Internal(msg));
+            Err(e) => {
+                return Err(e);
             }
         }
     }
@@ -459,21 +462,46 @@ impl Robinhood {
 
     // Necessary after every 24h since access_token has an expiration of 24h
     pub async fn refresh_token(&mut self) -> Result<(Token, RefreshToken), RobinhoodErr> {
-        let new_token_payload = refresh_token(
-            self,
-            &RefreshTokenPayload {
-                client_id: CLIENT_ID.to_owned(),
-                device_token: self.device_token,
-                grant_type: GrantType::RefreshToken,
-                refresh_token: self.refresh_token.clone(),
-                scope: Scope::Internal,
-                token_type: TokenType::Bearer,
+        let req_token_payload = RefreshTokenPayload {
+            client_id: CLIENT_ID.to_owned(),
+            device_token: self.device_token,
+            grant_type: GrantType::RefreshToken,
+            refresh_token: self.refresh_token.clone(),
+            scope: Scope::Internal,
+            token_type: TokenType::Bearer,
+        };
+        let req = reqwest::Client::new().post(&format!("{}{}", ROBINHOOD_API_URL, LOG_IN_PATH));
+        let login_response: LoginSuccess = match set_req_headers(self, req)
+            .json(&req_token_payload)
+            .send()
+            .await
+        {
+            Ok(v) => match v.json::<Value>().await {
+                Ok(body) => {
+                    if let Some(err_msg) = body["error"].as_str() {
+                        if err_msg == "invalid_grant" {
+                            return Err(RobinhoodErr::BadRefreshToken(self.refresh_token.clone()));
+                        }
+                    }
+
+                    match serde_json::from_value::<LoginSuccess>(body) {
+                        Ok(success) => success,
+                        Err(e) => {
+                            let msg = format!(
+                                "Failed to serialize successful login response body: ({})",
+                                e
+                            );
+                            return Err(RobinhoodErr::BadResponseBody(msg));
+                        }
+                    }
+                }
+                Err(e) => return Err(RobinhoodErr::RequestError(e)),
             },
-        )
-        .await?;
-        self.refresh_token = new_token_payload.refresh_token;
-        self.token = new_token_payload.access_token;
-        self.token_expires_in = new_token_payload.expires_in;
+            Err(e) => return Err(RobinhoodErr::RequestError(e)),
+        };
+        self.refresh_token = login_response.refresh_token;
+        self.token = login_response.access_token;
+        self.token_expires_in = login_response.expires_in;
         Ok((self.token.clone(), self.refresh_token.clone()))
     }
 }
@@ -485,36 +513,6 @@ impl AgentToken for Robinhood {
 
     fn get_token(&self) -> Option<&str> {
         Some(&self.token)
-    }
-}
-
-pub async fn refresh_token<T: AgentToken>(
-    requestor: &T,
-    payload: &RefreshTokenPayload,
-) -> Result<LoginSuccess, RobinhoodErr> {
-    match payload.grant_type {
-        GrantType::RefreshToken => {
-            let req = reqwest::Client::new().post(&format!("{}{}", ROBINHOOD_API_URL, LOG_IN_PATH));
-            let login_response: LoginSuccess =
-                match set_req_headers(requestor, req).json(&payload).send().await {
-                    Ok(v) => match v.json().await {
-                        Ok(res) => res,
-                        Err(e) => {
-                            let msg = format!("Failed to serialize token refresh response ({})", e);
-                            return Err(RobinhoodErr::Internal(msg));
-                        }
-                    },
-                    Err(e) => return Err(RobinhoodErr::RequestError(e)),
-                };
-            Ok(login_response)
-        }
-        _ => {
-            let msg = format!(
-                "Wrong grant type. Expected GrantType::RefreshToken got {:?}",
-                payload.grant_type
-            );
-            return Err(RobinhoodErr::Internal(msg));
-        }
     }
 }
 

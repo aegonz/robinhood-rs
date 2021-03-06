@@ -23,7 +23,7 @@ pub struct RobinhoodReq<'a> {
 }
 
 impl Robinhood {
-    pub async fn req(&mut self, request: RobinhoodReq<'_>) -> Result<Response, RobinhoodErr> {
+    pub async fn req(&self, request: RobinhoodReq<'_>) -> Result<Response, RobinhoodErr> {
         match request.kind {
             ReqKind::Post => {
                 let mut req = set_req_headers(self, reqwest::Client::new().post(request.url));
@@ -39,27 +39,20 @@ impl Robinhood {
         }
     }
 
-    async fn send_req(&mut self, req: RequestBuilder) -> Result<Response, RobinhoodErr> {
+    async fn send_req(&self, req: RequestBuilder) -> Result<Response, RobinhoodErr> {
         match req.send().await {
-            Ok(res) => return Ok(res),
-            Err(e) => {
-                if let Some(status_code) = e.status() {
-                    // If status code is a 401 try to refresh the token
-                    if status_code.as_u16() == 401 && self.auto_refresh {
-                        if let Err(_) = self.refresh_token().await {
-                            return Err(RobinhoodErr::Unauthorized);
-                        }
-                    }
-                    if status_code == 404 {
-                        match e.url() {
-                            Some(url) => {
-                                return Err(RobinhoodErr::NotFound(url.to_string()));
-                            }
-                            None => {}
-                        }
-                    }
+            Ok(res) => {
+                let status_code = res.status().as_u16();
+                // Request denied, Unauthorized
+                if status_code == 401 {
                     return Err(RobinhoodErr::Unauthorized);
                 }
+                if status_code == 404 {
+                    return Err(RobinhoodErr::NotFound(res.url().to_string()));
+                }
+                return Ok(res);
+            }
+            Err(e) => {
                 return Err(RobinhoodErr::RequestError(e));
             }
         }
