@@ -32,9 +32,9 @@
 //!
 //! }
 //! ```
-use error::RobinhoodErr;
 pub use reqwest::Error as ReqwestError;
 
+pub use error::{LoginErr, RobinhoodErr};
 use login::MfaLogin;
 use uuid::Uuid;
 
@@ -63,7 +63,6 @@ pub struct Robinhood {
     device_token: Uuid,
     user_agent: String,
     auto_refresh: bool,
-    retries: usize,
 }
 /// Initializes an MFA login session
 ///

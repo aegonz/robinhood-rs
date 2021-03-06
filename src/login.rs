@@ -2,9 +2,9 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use uuid::Uuid;
+use uuid::{ParseError, Uuid};
 
-use crate::{error::RobinhoodErr, req::set_req_headers};
+use crate::{req::set_req_headers, LoginErr, RobinhoodErr};
 use crate::{Robinhood, CLIENT_ID, EXPIRES_IN, LOG_IN_PATH, ROBINHOOD_API_URL, USER_AGENT};
 pub trait AgentToken {
     fn get_user_agent(&self) -> &str;
@@ -144,10 +144,8 @@ impl MfaLogin {
             Ok(res) => {
                 match res.json::<Value>().await {
                     Ok(body) => {
-                        if let Some(detail_msg) = body["detail"].as_str() {
-                            if detail_msg.contains("Unable to log in with provided credentials") {
-                                return Err(RobinhoodErr::InvalidCredentials);
-                            }
+                        if check_invalid_creds(&body) {
+                            return Err(RobinhoodErr::InvalidCredentials);
                         }
                     }
                     Err(e) => {
@@ -163,12 +161,11 @@ impl MfaLogin {
     }
 
     /// Logs in using an existing MFA code
-    pub async fn log_in(self, mfa_code: String) -> Result<Robinhood, RobinhoodErr> {
+    pub async fn log_in(self, mfa_code: String) -> Result<Robinhood, LoginErr> {
         let mut payload = match serde_json::to_value(self.build_login_payload()) {
             Ok(v) => v,
             Err(e) => {
-                let msg = format!("Failed to serialize login payload ({})", e);
-                return Err(RobinhoodErr::Internal(msg));
+                return Err(LoginErr::BadLoginBody(e.to_string()));
             }
         };
         // Add MFA code to the request payload
@@ -178,14 +175,12 @@ impl MfaLogin {
                 payload = serde_json::json!(map);
             }
             None => {
-                let msg = format!("Failed to add mfa_code to the payload");
-                return Err(RobinhoodErr::Internal(msg));
+                return Err(LoginErr::EmptyLoginBody);
             }
         }
         // Make sure mfa_code is in the request body
         if let None = payload.get("mfa_code") {
-            let msg = format!("Failed to insert 'mfa_code' to the request body");
-            return Err(RobinhoodErr::Internal(msg));
+            return Err(LoginErr::MissingMfaCode);
         }
         // Send request to Robinhood
         let login_response: LoginSuccess = match set_req_headers(
@@ -196,15 +191,24 @@ impl MfaLogin {
         .send()
         .await
         {
-            Ok(v) => match v.json().await {
-                Ok(v) => v,
+            Ok(v) => match v.json::<Value>().await {
+                Ok(body) => {
+                    if check_invalid_creds(&body) {
+                        return Err(LoginErr::InvalidCredentials);
+                    };
+                    match serde_json::from_value(body) {
+                        Ok(success) => success,
+                        Err(e) => {
+                            return Err(LoginErr::BadResponseBody(e.to_string()));
+                        }
+                    }
+                }
                 Err(e) => {
-                    let msg = format!("Failed to serialize the response body ({})", e);
-                    return Err(RobinhoodErr::Internal(msg));
+                    return Err(LoginErr::RequestError(e));
                 }
             },
             Err(e) => {
-                return Err(RobinhoodErr::RequestError(e));
+                return Err(LoginErr::RequestError(e));
             }
         };
         // Build a Robinhood session
@@ -216,7 +220,6 @@ impl MfaLogin {
             token: login_response.access_token,
             refresh_token: login_response.refresh_token,
             token_expires_in: login_response.expires_in,
-            retries: 200,
             auto_refresh: true,
         })
     }
@@ -249,15 +252,14 @@ impl MfaLogin {
     ///
     /// You should only have the need to use this if you logged in with a different device ID
     /// and want to use the same session tied to that device
-    pub fn change_device_token_str(&mut self, device_token: String) -> Result<(), RobinhoodErr> {
+    pub fn change_device_token_str(&mut self, device_token: String) -> Result<(), ParseError> {
         match Uuid::from_str(&device_token) {
             Ok(new_device_token) => {
                 self.device_token = new_device_token;
                 Ok(())
             }
-            Err(_) => {
-                let msg = format!("New device token is not a valid UUID");
-                return Err(RobinhoodErr::Internal(msg));
+            Err(e) => {
+                return Err(e);
             }
         }
     }
@@ -371,7 +373,6 @@ impl Robinhood {
             token,
             refresh_token,
             token_expires_in: EXPIRES_IN,
-            retries: 200,
             auto_refresh: true,
         }
     }
@@ -456,17 +457,6 @@ impl Robinhood {
         self.auto_refresh = auto_refresh;
     }
 
-    /// Default retries is 200
-    ///
-    /// The lib will try to refresh the token if any of the calls return a 401
-    ///
-    /// If the auto refresh failed with a connection error it will retry.
-    ///
-    /// Other types of connection error should be handled application specific instead
-    pub fn set_retries(&mut self, retries: usize) {
-        self.retries = retries;
-    }
-
     // Necessary after every 24h since access_token has an expiration of 24h
     pub async fn refresh_token(&mut self) -> Result<(Token, RefreshToken), RobinhoodErr> {
         let new_token_payload = refresh_token(
@@ -526,4 +516,13 @@ pub async fn refresh_token<T: AgentToken>(
             return Err(RobinhoodErr::Internal(msg));
         }
     }
+}
+
+pub fn check_invalid_creds(body: &Value) -> bool {
+    if let Some(detail_msg) = body["detail"].as_str() {
+        if detail_msg.contains("Unable to log in with provided credentials") {
+            return true;
+        }
+    }
+    return false;
 }
