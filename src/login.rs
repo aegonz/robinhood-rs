@@ -478,6 +478,7 @@ impl Robinhood {
         {
             Ok(v) => match v.json::<Value>().await {
                 Ok(body) => {
+                    // Check if refresh_token was invalid
                     if let Some(err_msg) = body["error"].as_str() {
                         if err_msg == "invalid_grant" {
                             return Err(RefreshTokenErr::BadRefreshToken(
@@ -485,7 +486,6 @@ impl Robinhood {
                             ));
                         }
                     }
-
                     match serde_json::from_value::<LoginSuccess>(body) {
                         Ok(success) => success,
                         Err(e) => {
@@ -493,7 +493,7 @@ impl Robinhood {
                                 "Failed to serialize successful login response body: ({})",
                                 e
                             );
-                            return Err(RefreshTokenErr::BadResponseBody(msg));
+                            return Err(RefreshTokenErr::WrongResponseBody(msg));
                         }
                     }
                 }

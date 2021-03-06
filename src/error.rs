@@ -100,5 +100,5 @@ pub enum RefreshTokenErr {
     #[error("{0}")]
     RequestError(#[from] ReqwestError),
     #[error("{0}")]
-    BadResponseBody(String),
+    WrongResponseBody(String),
 }
